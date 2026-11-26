@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { canAccessPathname, isAdminPanelRole } from "@/lib/auth/permissions";
 import type { UserRole } from "@/types/database";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
   });
@@ -69,6 +69,8 @@ export async function middleware(request: NextRequest) {
 
   return supabaseResponse;
 }
+
+export default proxy;
 
 export const config = {
   matcher: [
