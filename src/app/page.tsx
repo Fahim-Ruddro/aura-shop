@@ -52,7 +52,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   // Strictly show ONLY active products belonging to active categories
   let productsQuery = supabase
     .from("products")
-    .select("*, categories!inner(id, name, slug, is_active)")
+    .select("*, categories!inner(id, name, slug, is_active), product_variants(*)")
     .eq("status", "active")
     .eq("categories.is_active", true)
     .order("created_at", { ascending: false });
@@ -252,7 +252,26 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           ) : (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {activeProducts.map((product) => {
+                const activeVariants = (product.product_variants ?? [])
+                  .filter((v) => v.is_active)
+                  .sort((a, b) => a.display_order - b.display_order);
+
+                const effectivePrices =
+                  activeVariants.length > 0
+                    ? activeVariants.map((v) =>
+                        v.sale_price !== null ? Number(v.sale_price) : Number(v.price)
+                      )
+                    : [
+                        product.sale_price !== null
+                          ? Number(product.sale_price)
+                          : Number(product.price),
+                      ];
+
+                const minPrice = Math.min(...effectivePrices);
+                const maxPrice = Math.max(...effectivePrices);
+
                 const hasSale =
+                  activeVariants.length === 0 &&
                   product.sale_price !== null &&
                   Number(product.sale_price) < Number(product.price);
 
@@ -286,8 +305,33 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                     </CardHeader>
 
                     <CardContent className="mt-auto space-y-3 pt-2">
+                      {activeVariants.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {activeVariants.map((variant) => (
+                            <Badge
+                              key={variant.id}
+                              variant="outline"
+                              className="text-[11px]"
+                            >
+                              {variant.name} •{" "}
+                              {formatBDT(
+                                variant.sale_price !== null
+                                  ? variant.sale_price
+                                  : variant.price
+                              )}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+
                       <div className="flex items-baseline justify-between">
-                        {hasSale ? (
+                        {activeVariants.length > 0 ? (
+                          <span className="text-lg font-bold text-foreground">
+                            {minPrice === maxPrice
+                              ? formatBDT(minPrice)
+                              : `${formatBDT(minPrice)} – ${formatBDT(maxPrice)}`}
+                          </span>
+                        ) : hasSale ? (
                           <div className="flex items-baseline gap-2">
                             <span className="text-lg font-bold text-emerald-700">
                               {formatBDT(product.sale_price)}

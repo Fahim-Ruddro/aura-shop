@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 const slugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const skuRegex = /^[A-Z0-9-]+$/;
 
 export const categorySchema = z.object({
   name: z
@@ -109,3 +110,78 @@ export function parseTagsInput(tagsInput: string): string[] {
     )
   );
 }
+
+export const variantSchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(1, "Variant size/label is required (e.g., 250g, 500g, 1kg).")
+      .max(60, "Variant label must be 60 characters or less."),
+    sku: z
+      .string()
+      .trim()
+      .toUpperCase()
+      .min(2, "SKU must be at least 2 characters.")
+      .max(40, "SKU must be 40 characters or less.")
+      .regex(
+        skuRegex,
+        "SKU can only contain uppercase letters, numbers, and hyphens (e.g., HNY-500G)."
+      ),
+    price: z
+      .number({ message: "Price must be a valid number." })
+      .positive("Price must be greater than 0 BDT."),
+    sale_price: z
+      .number({ message: "Sale price must be a valid number." })
+      .nonnegative("Sale price cannot be negative.")
+      .nullable(),
+    stock: z
+      .number({ message: "Stock must be a valid number." })
+      .int("Stock must be a whole number.")
+      .min(0, "Stock cannot be negative."),
+    display_order: z
+      .number({ message: "Display order must be a valid number." })
+      .int("Display order must be a whole number.")
+      .min(0, "Display order cannot be negative."),
+    is_active: z.boolean(),
+  })
+  .refine(
+    (data) => data.sale_price === null || data.sale_price < data.price,
+    {
+      message: "Sale price must be lower than the regular price.",
+      path: ["sale_price"],
+    }
+  );
+
+export type VariantFormValues = z.infer<typeof variantSchema>;
+
+export const productImageSchema = z.object({
+  image_url: z
+    .string()
+    .trim()
+    .refine(
+      (val) => /^https?:\/\/.+/.test(val),
+      "Image URL must start with http:// or https://"
+    ),
+  alt_text: z.string().trim().max(160, "Alt text must be 160 characters or less."),
+  is_primary: z.boolean(),
+});
+
+export type ProductImageFormValues = z.infer<typeof productImageSchema>;
+
+export const stockAdjustmentSchema = z.object({
+  product_id: z.string().uuid("Please select a product."),
+  variant_id: z.string().uuid().nullable(),
+  movement_type: z.enum(["restock", "damage", "correction", "return"]),
+  quantity_change: z
+    .number({ message: "Quantity change must be a valid number." })
+    .int("Quantity change must be a whole number.")
+    .refine((val) => val !== 0, "Quantity change cannot be 0."),
+  reason: z
+    .string()
+    .trim()
+    .min(3, "Please provide a clear reason (at least 3 characters).")
+    .max(300, "Reason must be 300 characters or less."),
+});
+
+export type StockAdjustmentValues = z.infer<typeof stockAdjustmentSchema>;
