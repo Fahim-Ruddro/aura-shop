@@ -3,7 +3,6 @@ import {
   Leaf,
   LogIn,
   LogOut,
-  Package,
   ShieldAlert,
   ShieldCheck,
   ShoppingBag,
@@ -12,19 +11,12 @@ import {
 import { logoutAction } from "@/actions/auth";
 import { getCurrentProfile } from "@/lib/auth/guards";
 import { isAdminPanelRole } from "@/lib/auth/permissions";
-import { formatBDT } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 import type { Category, ProductWithCategory } from "@/types/database";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { StorefrontCatalog } from "@/components/storefront/storefront-catalog";
 
 interface HomePageProps {
   searchParams: Promise<{ error?: string; category?: string }>;
@@ -79,7 +71,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             <div>
               <span>Aura Shop</span>
               <span className="ml-2 hidden text-xs font-normal text-muted-foreground sm:inline">
-                Organic & Specialty Grocery
+                Organic &amp; Specialty Grocery
               </span>
             </div>
           </Link>
@@ -142,8 +134,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             <div>
               <p className="font-semibold">Access Denied</p>
               <p>
-                Customer accounts cannot access the <code>/admin</code> dashboard or staff
-                actions.
+                Customer accounts cannot access the <code>/admin</code> dashboard or
+                staff actions.
               </p>
             </div>
           </div>
@@ -159,8 +151,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             Pure Organic Pantry Staples, Delivered Across Bangladesh.
           </h1>
           <p className="mt-4 max-w-xl text-base text-muted-foreground sm:text-lg">
-            Sundarbans raw honey, cold-pressed mustard oil, aromatic Chinigura rice, and
-            artisanal spices—sourced directly from trusted growers and delivered in BDT (৳).
+            Sundarbans raw honey, cold-pressed mustard oil, aromatic Chinigura rice,
+            and artisanal spices—sourced directly from trusted growers and delivered in
+            BDT (৳).
           </p>
 
           <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -190,11 +183,13 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           </div>
         </section>
 
-        {/* Live Storefront Catalog */}
+        {/* Live Storefront Catalog + Cart */}
         <section id="catalog" className="mt-12 space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-bold tracking-tight">Shop Specialty Groceries</h2>
+              <h2 className="text-2xl font-bold tracking-tight">
+                Shop Specialty Groceries
+              </h2>
               <p className="text-sm text-muted-foreground">
                 Showing {activeProducts.length} active product
                 {activeProducts.length === 1 ? "" : "s"} in BDT (৳).
@@ -238,144 +233,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             )}
           </div>
 
-          {activeProducts.length === 0 ? (
-            <Card className="border-dashed py-12 text-center">
-              <CardContent className="space-y-2">
-                <Package className="mx-auto h-9 w-9 text-muted-foreground" />
-                <p className="font-medium text-foreground">No active products available</p>
-                <p className="text-sm text-muted-foreground">
-                  Products marked as <strong>Active</strong> by a Manager or Admin in{" "}
-                  <code>/admin/products</code> will appear here immediately.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {activeProducts.map((product) => {
-                const activeVariants = (product.product_variants ?? [])
-                  .filter((v) => v.is_active)
-                  .sort((a, b) => a.display_order - b.display_order);
-
-                const effectivePrices =
-                  activeVariants.length > 0
-                    ? activeVariants.map((v) =>
-                        v.sale_price !== null ? Number(v.sale_price) : Number(v.price)
-                      )
-                    : [
-                        product.sale_price !== null
-                          ? Number(product.sale_price)
-                          : Number(product.price),
-                      ];
-
-                const minPrice = Math.min(...effectivePrices);
-                const maxPrice = Math.max(...effectivePrices);
-
-                const hasSale =
-                  activeVariants.length === 0 &&
-                  product.sale_price !== null &&
-                  Number(product.sale_price) < Number(product.price);
-
-                return (
-                  <Card key={product.id} className="flex flex-col overflow-hidden">
-                    {product.image_url ? (
-                      <img
-                        src={product.image_url}
-                        alt={product.name}
-                        className="h-48 w-full border-b object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-48 w-full items-center justify-center border-b bg-muted text-muted-foreground">
-                        <Leaf className="h-10 w-10 text-emerald-600/40" />
-                      </div>
-                    )}
-
-                    <CardHeader className="pb-2">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <Badge variant="secondary">
-                          {product.categories?.name ?? "Specialty"}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          Origin: {product.country_of_origin}
-                        </span>
-                      </div>
-                      <CardTitle className="mt-2 text-lg">{product.name}</CardTitle>
-                      <CardDescription className="line-clamp-2">
-                        {product.short_description}
-                      </CardDescription>
-                    </CardHeader>
-
-                    <CardContent className="mt-auto space-y-3 pt-2">
-                      {activeVariants.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5">
-                          {activeVariants.map((variant) => (
-                            <Badge
-                              key={variant.id}
-                              variant="outline"
-                              className="text-[11px]"
-                            >
-                              {variant.name} •{" "}
-                              {formatBDT(
-                                variant.sale_price !== null
-                                  ? variant.sale_price
-                                  : variant.price
-                              )}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-
-                      <div className="flex items-baseline justify-between">
-                        {activeVariants.length > 0 ? (
-                          <span className="text-lg font-bold text-foreground">
-                            {minPrice === maxPrice
-                              ? formatBDT(minPrice)
-                              : `${formatBDT(minPrice)} – ${formatBDT(maxPrice)}`}
-                          </span>
-                        ) : hasSale ? (
-                          <div className="flex items-baseline gap-2">
-                            <span className="text-lg font-bold text-emerald-700">
-                              {formatBDT(product.sale_price)}
-                            </span>
-                            <span className="text-sm text-muted-foreground line-through">
-                              {formatBDT(product.price)}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-lg font-bold text-foreground">
-                            {formatBDT(product.price)}
-                          </span>
-                        )}
-
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            product.stock > 0
-                              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                              : "border-destructive/30 bg-destructive/10 text-destructive"
-                          )}
-                        >
-                          {product.stock > 0 ? `In Stock (${product.stock})` : "Out of Stock"}
-                        </Badge>
-                      </div>
-
-                      {product.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5">
-                          {product.tags.map((tag) => (
-                            <span
-                              key={tag}
-                              className="rounded bg-muted px-2 py-0.5 text-[11px] text-muted-foreground"
-                            >
-                              #{tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
+          <StorefrontCatalog products={activeProducts} profile={profile} />
         </section>
       </main>
     </div>
