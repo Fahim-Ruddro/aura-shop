@@ -9,6 +9,21 @@ export type StockMovementType =
   | "return"
   | "order";
 
+export type OrderStatus =
+  | "pending"
+  | "confirmed"
+  | "processing"
+  | "shipped"
+  | "delivered"
+  | "cancelled"
+  | "returned";
+
+export type PaymentStatus = "unpaid" | "paid" | "refunded";
+
+export type PaymentMethod = "cod" | "bkash" | "nagad" | "card";
+
+export type DeliveryZone = "inside_dhaka" | "outside_dhaka";
+
 export interface Profile {
   id: string;
   email: string;
@@ -114,4 +129,76 @@ export interface StockMovementWithDetails {
     full_name: string;
     email: string;
   } | null;
+}
+
+export interface Order {
+  id: string;
+  order_number: string;
+  customer_id: string | null;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string;
+  shipping_address: string;
+  delivery_zone: DeliveryZone;
+  payment_method: PaymentMethod;
+  payment_status: PaymentStatus;
+  status: OrderStatus;
+  subtotal: number;
+  discount_amount: number;
+  delivery_charge: number;
+  total_amount: number;
+  coupon_code: string | null;
+  customer_note: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrderItem {
+  id: string;
+  order_id: string;
+  product_id: string | null;
+  variant_id: string | null;
+  product_name: string;
+  variant_name: string | null;
+  sku: string;
+  unit_price: number;
+  quantity: number;
+  line_total: number;
+  created_at: string;
+}
+
+export interface OrderStatusHistoryEntry {
+  id: string;
+  order_id: string;
+  from_status: OrderStatus | null;
+  to_status: OrderStatus;
+  note: string;
+  changed_by: string | null;
+  created_at: string;
+  profiles?: {
+    full_name: string;
+    email: string;
+  } | null;
+}
+
+export interface OrderNoteEntry {
+  id: string;
+  order_id: string;
+  author_id: string | null;
+  note: string;
+  created_at: string;
+  profiles?: {
+    full_name: string;
+    email: string;
+  } | null;
+}
+
+export interface OrderWithItemCount extends Order {
+  order_items: Array<{ quantity: number }>;
+}
+
+export interface OrderFullDetails extends Order {
+  order_items: OrderItem[];
+  order_status_history: OrderStatusHistoryEntry[];
+  order_notes: OrderNoteEntry[];
 }
