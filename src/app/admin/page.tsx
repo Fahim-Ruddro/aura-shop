@@ -60,7 +60,7 @@ export default async function AdminDashboardPage({
             </Badge>
           </div>
           <CardDescription>
-            Protected across Next.js Middleware, Server Components/Actions, and Supabase
+            Protected across Next.js Proxy, Server Components/Actions, and Supabase
             Row-Level Security (RLS).
           </CardDescription>
         </CardHeader>
